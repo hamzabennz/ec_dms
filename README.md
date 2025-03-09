@@ -1,4 +1,5 @@
-# EC_DMS - Document Management System
+# Entreprise Computing - Document Management System
+Name: Hamza Benzaoui
 
 ## Deliverable 1 Overview
 
