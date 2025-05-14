@@ -29,8 +29,16 @@ function InputForm({
     const { sidenavColor } = controller;
 
     const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setFormValues((prev) => ({ ...prev, [name]: value }));
+        const { name, type } = e.target;
+        
+        // Special handling for file inputs
+        if (type === 'file') {
+            const file = e.target.files[0];
+            setFormValues((prev) => ({ ...prev, [name]: file }));
+        } else {
+            const { value } = e.target;
+            setFormValues((prev) => ({ ...prev, [name]: value }));
+        }
     };
 
     const handleSubmit = (e) => {
@@ -39,6 +47,24 @@ function InputForm({
     };
 
     const renderFormField = (input, index) => {
+        // Handle file inputs
+        if (input.type === 'file') {
+            return (
+                <MDInput
+                    key={index}
+                    type="file"
+                    label={input.label}
+                    name={input.name}
+                    onChange={handleInputChange}
+                    fullWidth
+                    required={input.required}
+                    inputProps={{
+                        accept: input.accept || '*',
+                    }}
+                />
+            );
+        }
+        
         // Handle select inputs differently
         if (input.type === "select" && input.options) {
             return (
