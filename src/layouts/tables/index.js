@@ -57,7 +57,7 @@ function AddUserForm({ open, onClose }) {
         password: values.password
       };
       // POST request
-      const response = await fetch("http://localhost:8080/api/users", {
+      const response = await fetch("http://10.80.12.171:8080/auth/api/users", {
         method: "POST",
         headers: {
           "Authorization": `${tokenType} ${token}`,
@@ -145,7 +145,7 @@ function EmployeeDataTable({ onRowClick }) {
 
   return (
     <DataTable
-      apiUrl="http://localhost:8080/api/users"
+      apiUrl="http://10.80.12.171:8080/auth/api/users"
       columns={columns}
       title="Users Table"
       onRowClick={onRowClick}
