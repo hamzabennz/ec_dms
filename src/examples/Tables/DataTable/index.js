@@ -32,9 +32,6 @@ import MDPagination from "components/MDPagination";
 import DataTableHeadCell from "examples/Tables/DataTable/DataTableHeadCell";
 import DataTableBodyCell from "examples/Tables/DataTable/DataTableBodyCell";
 
-/**
- * Reusable DataTable component with server-side data fetching and Material Dashboard styling
- */
 export default function DataTable({
   columns = [],
   apiUrl = "",
@@ -44,8 +41,9 @@ export default function DataTable({
   enableFilters = true,
   enablePagination = true,
   onRowClick = null,
+  searchField = "name",
 }) {
-  // State management (keeping original state variables)
+  // State management
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState([]);
   const [page, setPage] = useState(1);
@@ -59,14 +57,10 @@ export default function DataTable({
     op: "contains",
     value: "",
   });
-
   const [rowsPerPage, setRowsPerPage] = useState(initialRowsPerPage);
 
-
-  // Entries per page options for dropdown
   const entriesOptions = ["5", "10", "20", "25", "30"];
 
-  // Filter operators matching backend
   const filterOperators = [
     { value: "eq", label: "Equals" },
     { value: "ne", label: "Not Equals" },
@@ -79,95 +73,112 @@ export default function DataTable({
     { value: "endswith", label: "Ends With" },
   ];
 
-  useEffect(() => {
-    let isMounted = true; // Track component mount state
-
-    const fetchData = async () => {
-      if (!apiUrl) return;
-      setLoading(true);
-
-      try {
-        const params = new URLSearchParams({
-          page,
-          per_page: rowsPerPage,
-          sort_by: "id",
-          order: "asc",
-        });
-
-        const filterBody = [];
-        if (search) filterBody.push({ key: "name", op: "contains", value: search });
-        filterBody.push(...filters);
-
-        const response = await fetch(`${apiUrl}?${params.toString()}`, {
-          method: filters.length > 0 || search ? "POST" : "GET",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: filters.length > 0 || search ? JSON.stringify(filterBody) : null,
-        });
-
-        if (!isMounted) return; // Prevent state update if unmounted
-
-        const result = await response.json();
-        if (result.status === "success") {
-          setData(result.data || []);
-          setTotalRows(result.pagination.total_records || 0);
-        } else {
-          throw new Error("API returned error");
+  const fetchData = useCallback(async () => {
+    if (!apiUrl) return;
+    setLoading(true);
+    try {
+      // Map frontend filters to backend query params
+      let query = {
+        page: (page - 1).toString(), // backend is 0-based
+        size: rowsPerPage.toString(),
+      };
+      filters.forEach((filter) => {
+        if (["name", "email", "department"].includes(filter.key)) {
+          query[filter.key] = filter.value;
         }
-      } catch (error) {
-        console.error("Error fetching data:", error);
+      });
+      if (search && searchField) {
+        query[searchField] = search;
+      }
+      const params = new URLSearchParams(query);
+
+      let token = null;
+      let tokenType = "Bearer";
+      const authData = localStorage.getItem("auth");
+      if (authData) {
+        try {
+          const authObject = JSON.parse(authData);
+          token = authObject.token || authObject.accessToken;
+          tokenType = authObject.tokenType || "Bearer";
+        } catch (e) {
+          console.error("Error parsing auth data:", e);
+        }
+      }
+      // Only set Authorization header for GET
+      const headers = {};
+      if (token) headers["Authorization"] = `${tokenType} ${token}`;
+
+      const fetchUrl = `${apiUrl}?${params.toString()}`;
+      console.log("Fetching:", fetchUrl);
+      console.log("Headers:", headers);
+      const response = await fetch(fetchUrl, {
+        method: "GET",
+        headers,
+      });
+      if (response.status === 401) {
+        throw new Error("Unauthorized. Please log in again.");
+      }
+      const text = await response.text();
+      let result = {};
+      try {
+        result = text ? JSON.parse(text) : {};
+      } catch (e) {
+        console.error("Failed to parse response as JSON:", text);
+      }
+      console.log("Backend response:", result);
+      if (result.content) {
+        setData(result.content);
+        setTotalRows(result.totalElements || result.content.length);
+      } else if (Array.isArray(result)) {
+        setData(result);
+        setTotalRows(result.length);
+      } else {
         setData([]);
         setTotalRows(0);
-      } finally {
-        if (isMounted) setLoading(false);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      setData([]);
+      setTotalRows(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [apiUrl, page, rowsPerPage, filters, search, searchField]);
 
-    fetchData();
-
+  useEffect(() => {
+    let isMounted = true;
+    fetchData().then(() => {
+      if (!isMounted) return;
+    });
     return () => {
-      isMounted = false; // Cleanup function to prevent memory leaks
+      isMounted = false;
     };
-  }, [apiUrl, page, rowsPerPage, filters, search]);
+  }, [fetchData]);
 
-  const debouncedSearch = useCallback(debounce((newSearch) => {
-    setSearch(newSearch);
-    setPage(1); // Reset pagination
-  }, 300), []);
+  const debouncedSearch = useCallback(
+    debounce((newSearch) => {
+      setSearch(newSearch);
+      setPage(1);
+    }, 300),
+    []
+  );
 
-  // Calculate total pages
-  const totalPages = enablePagination ? Math.ceil(totalRows / rowsPerPage) : 1;
+  const totalPages = enablePagination ? Math.max(1, Math.ceil(totalRows / rowsPerPage)) : 1;
 
-  // Handle page change
-  const handlePageChange = (_, newPage) => {
-    setPage(newPage);
-  };
-
-  // Handler for entries per page change
   const setEntriesPerPage = (value) => {
-    // Store the current value
     const currentValue = parseInt(value, 10);
-
-    // Update component state for rowsPerPage
     setRowsPerPage(currentValue);
-
-    // Reset to first page whenever entries per page changes
-    // to avoid showing an empty page if current page exceeds new total pages
     setPage(1);
   };
 
-  // Open filter menu
   const handleFilterMenuOpen = (event) => {
     setFilterMenuAnchor(event.currentTarget);
   };
 
-  // Close filter menu
   const handleFilterMenuClose = () => {
     setFilterMenuAnchor(null);
   };
 
-  // Open filter dialog for a specific column
   const handleFilterDialogOpen = (columnField) => {
     setCurrentFilter({
       key: columnField,
@@ -178,69 +189,101 @@ export default function DataTable({
     handleFilterMenuClose();
   };
 
-  // Close filter dialog
   const handleFilterDialogClose = () => {
     setFilterDialogOpen(false);
   };
 
-  // Apply the filter
   const handleApplyFilter = () => {
     if (currentFilter.key && currentFilter.value) {
-      setFilters([...filters, { ...currentFilter }]);
+      setFilters((prev) => [...prev, { ...currentFilter }]);
       setFilterDialogOpen(false);
-      setPage(1); // Reset to first page when adding filters
+      setPage(1);
     }
   };
 
-  // Remove a filter
   const handleRemoveFilter = (index) => {
-    const newFilters = [...filters];
-    newFilters.splice(index, 1);
-    setFilters(newFilters);
-    setPage(1); // Reset to first page when removing filters
-  };
-
-  // Clear all filters
-  const handleClearFilters = () => {
-    setFilters([]);
+    setFilters((prev) => prev.filter((_, i) => i !== index));
     setPage(1);
   };
 
-  // Get column label by field name
+  const handleClearFilters = () => {
+    setFilters([]);
+    setSearch("");
+    setPage(1);
+  };
+
   const getColumnLabel = (field) => {
     const column = columns.find((col) => col.field === field);
     return column ? column.headerName : field;
   };
 
-  // Get operator label
   const getOperatorLabel = (operator) => {
     const op = filterOperators.find((op) => op.value === operator);
     return op ? op.label : operator;
   };
 
-  // Render pagination elements
-  const renderPagination = Array.from({ length: totalPages }, (_, i) => i).map((pageNum) => (
-    <MDPagination
-      item
-      key={pageNum}
-      onClick={() => setPage(pageNum + 1)}
-      active={page === pageNum + 1}
-    >
-      {pageNum + 1}
-    </MDPagination>
-  ));
+  // Enhanced pagination rendering
+  const renderPagination = () => {
+    if (totalPages <= 6) {
+      return Array.from({ length: totalPages }, (_, i) => (
+        <MDPagination
+          item
+          key={i}
+          onClick={() => setPage(i + 1)}
+          active={page === i + 1}
+        >
+          {i + 1}
+        </MDPagination>
+      ));
+    }
 
-  // Calculate entries range for display
-  const entriesStart = (page - 1) * rowsPerPage + 1;
+    const pages = [];
+    const addPage = (pageNum) => (
+      <MDPagination
+        item
+        key={pageNum}
+        onClick={() => setPage(pageNum)}
+        active={page === pageNum}
+      >
+        {pageNum}
+      </MDPagination>
+    );
+
+    // Always show first page
+    pages.push(addPage(1));
+
+    // Show ellipsis if needed
+    if (page > 3) {
+      pages.push(<MDTypography key="start-ellipsis">...</MDTypography>);
+    }
+
+    // Show pages around current page
+    const startPage = Math.max(2, page - 1);
+    const endPage = Math.min(totalPages - 1, page + 1);
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(addPage(i));
+    }
+
+    // Show ellipsis if needed
+    if (page < totalPages - 2) {
+      pages.push(<MDTypography key="end-ellipsis">...</MDTypography>);
+    }
+
+    // Always show last page
+    if (totalPages > 1) {
+      pages.push(addPage(totalPages));
+    }
+
+    return pages;
+  };
+
+  const entriesStart = totalRows === 0 ? 0 : (page - 1) * rowsPerPage + 1;
   const entriesEnd = Math.min(page * rowsPerPage, totalRows);
 
   return (
     <TableContainer sx={{ boxShadow: "none" }}>
-      {/* Header with entries per page and search controls */}
       <MDBox display="flex" justifyContent="space-between" alignItems="center" p={3}>
-
         <MDBox display="flex" alignItems="center" gap={2}>
-          {/* Entries per page dropdown */}
           <MDBox display="flex" alignItems="center">
             <Autocomplete
               disableClearable
@@ -260,7 +303,6 @@ export default function DataTable({
             </MDTypography>
           </MDBox>
 
-          {/* Search */}
           {enableSearch && (
             <MDBox width="12rem">
               <MDInput
@@ -273,7 +315,6 @@ export default function DataTable({
             </MDBox>
           )}
 
-          {/* Filter button */}
           {enableFilters && (
             <IconButton onClick={handleFilterMenuOpen}>
               <FilterListIcon />
@@ -282,7 +323,6 @@ export default function DataTable({
         </MDBox>
       </MDBox>
 
-      {/* Active filters display */}
       {filters.length > 0 && (
         <MDBox display="flex" flexWrap="wrap" gap={1} mb={2} px={3}>
           {filters.map((filter, index) => (
@@ -309,7 +349,7 @@ export default function DataTable({
               </Icon>
             </MDBox>
           ))}
-          {filters.length > 1 && (
+          {filters.length > 0 && (
             <MDBox
               component="span"
               bgColor="error"
@@ -328,7 +368,6 @@ export default function DataTable({
         </MDBox>
       )}
 
-      {/* Table container */}
       <Table>
         <MDBox component="thead">
           <TableRow>
@@ -367,7 +406,7 @@ export default function DataTable({
               >
                 {columns.map((column) => (
                   <DataTableBodyCell key={column.field} align={column.align || "left"}>
-                    {column.renderCell ? column.renderCell(row) : row[column.field]}
+                    {column.renderCell ? column.renderCell(row) : row[column.field] ?? "-"}
                   </DataTableBodyCell>
                 ))}
               </TableRow>
@@ -376,8 +415,7 @@ export default function DataTable({
         </TableBody>
       </Table>
 
-      {/* Pagination and entries display */}
-      {enablePagination && totalPages > 0 && (
+      {enablePagination && (
         <MDBox
           display="flex"
           flexDirection={{ xs: "column", sm: "row" }}
@@ -399,26 +437,7 @@ export default function DataTable({
                 </MDPagination>
               )}
 
-              {renderPagination.length > 6 ? (
-                <MDBox width="5rem" mx={1}>
-                  <MDInput
-                    inputProps={{
-                      type: "number",
-                      min: 1,
-                      max: totalPages
-                    }}
-                    value={page}
-                    onChange={(e) => {
-                      const newPage = parseInt(e.target.value, 10);
-                      if (newPage > 0 && newPage <= totalPages) {
-                        setPage(newPage);
-                      }
-                    }}
-                  />
-                </MDBox>
-              ) : (
-                renderPagination
-              )}
+              {renderPagination()}
 
               {page < totalPages && (
                 <MDPagination item onClick={() => setPage(page + 1)}>
@@ -430,7 +449,6 @@ export default function DataTable({
         </MDBox>
       )}
 
-      {/* Filter Column Menu */}
       <Menu
         anchorEl={filterMenuAnchor}
         open={Boolean(filterMenuAnchor)}
@@ -443,7 +461,6 @@ export default function DataTable({
         ))}
       </Menu>
 
-      {/* Filter Dialog */}
       <Dialog open={filterDialogOpen} onClose={handleFilterDialogClose}>
         <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <MDTypography variant="h6">Add Filter</MDTypography>
@@ -493,7 +510,7 @@ export default function DataTable({
                 cursor: "pointer",
                 background: "none",
                 border: "none",
-                padding: "8px 16px"
+                padding: "8px 16px",
               }}
             >
               Cancel
@@ -508,7 +525,7 @@ export default function DataTable({
                 cursor: "pointer",
                 background: "none",
                 border: "none",
-                padding: "8px 16px"
+                padding: "8px 16px",
               }}
             >
               Apply
@@ -520,7 +537,6 @@ export default function DataTable({
   );
 }
 
-// PropTypes validation
 DataTable.propTypes = {
   columns: PropTypes.arrayOf(
     PropTypes.shape({
@@ -538,4 +554,9 @@ DataTable.propTypes = {
   enableFilters: PropTypes.bool,
   enablePagination: PropTypes.bool,
   onRowClick: PropTypes.func,
+  searchField: PropTypes.string,
+};
+
+DataTable.defaultProps = {
+  searchField: "name",
 };
