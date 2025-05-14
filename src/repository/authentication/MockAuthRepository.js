@@ -4,19 +4,38 @@ class MockAuthRepository extends IAuthRepository {
   constructor() {
     super();
     this.user = null;
+    this.token = null;
   }
 
-  login(username, password) {
-    console.log('Mock Login .... using ')
-    if (username === "admin@admin") {
-      this.user = { username };
+  async login(username, password) {
+    try {
+      const response = await fetch("http://10.80.12.171:8080/auth/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ email: username, password })
+      });
+      if (!response.ok) {
+        return { success: false, message: "Invalid credentials" };
+      }
+      const data = await response.json();
+      this.token = data.accessToken;
+      this.user = {
+        email: data.email,
+        roles: data.roles,
+        token: data.accessToken,
+        tokenType: data.tokenType
+      };
       return { success: true, user: this.user };
+    } catch (error) {
+      return { success: false, message: "Login failed" };
     }
-    return { success: false, message: "Invalid credentials" };
   }
 
   logout() {
     this.user = null;
+    this.token = null;
   }
 
   getCurrentUser() {

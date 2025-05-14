@@ -54,7 +54,7 @@ function createExtraActions() {
                     history.navigate('/dashboard');
 
                 } else {
-                    alert('Invalid username or password,,,( use admin for login ) ');
+                    alert('Invalid email or password.');
                 }
 
             }
