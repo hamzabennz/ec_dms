@@ -95,7 +95,7 @@ export default function DataTable({
         });
 
         const filterBody = [];
-        if (search) filterBody.push({ key: "name", op: "contains", value: search });
+        if (search) filterBody.push({ key: "title", op: "contains", value: search });
         filterBody.push(...filters);
 
         const response = await fetch(`${apiUrl}?${params.toString()}`, {
