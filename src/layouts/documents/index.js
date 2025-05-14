@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Grid from "@mui/material/Grid";
 import Card from "@mui/material/Card";
 import MDBox from "components/MDBox";
@@ -10,56 +10,117 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import IconButton from "@mui/material/IconButton";
 import CloseIcon from "@mui/icons-material/Close";
+import { useNavigate } from 'react-router-dom';
+import PropTypes from "prop-types";
 
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
-import { useNavigate } from 'react-router-dom';
-import BASE_URL from "static/baseUrl";
-import PropTypes from "prop-types";
-
 import InputForm from "components/InputForm";
-
+import { DOCUMENTS_BASE_URL } from "static/baseUrl";
 import { useMaterialUIController } from "../../context";
 
-
 function AddDocumentForm({ open, onClose }) {
-  const handleSubmit = (values) => {
-    console.log("Form submitted:", values);
-    // Process form data
-    onClose(); // Close the dialog after submission
-  };
+  const [categories, setCategories] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [categoriesRes, departmentsRes] = await Promise.all([
+          fetch('http://10.80.12.171:8080/documents/api/categories'),
+          fetch('http://10.80.12.171:8080/documents/api/departments')
+        ]);
+
+        const [categoriesData, departmentsData] = await Promise.all([
+          categoriesRes.json(),
+          departmentsRes.json()
+        ]);
+
+        setCategories(categoriesData);
+        setDepartments(departmentsData);
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setIsLoading(false);
+      }
+    };
+
+    if (open) {
+      fetchData();
+    }
+  }, [open]);
+
+  const handleSubmit = async (values) => {
+  try {
+    const payload = {
+      title: values.title,
+      translatedTitle: values.translatedTitle || "",
+      fileUrl: values.file, 
+      categoryName: values.categoryName,
+      departmentName: values.departmentName,
+    };
+
+    console.log("Submitting payload:", payload);
+
+    const response = await fetch(`${DOCUMENTS_BASE_URL}/api/documents?userId=1`, {
+      method: 'POST',
+      headers: {
+        "Content-Type": "multipart/form-data"
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    onClose();
+  } catch (error) {
+    console.error("Error submitting form:", error);
+  }
+};
+
+
 
   const formInputs = [
-    { name: "name", label: "Name", required: true },
-    { name: "description", label: "Description", multiline: true, rows: 2 },
-    { name: "file", label: "File", type: "file", required: true },
-    { name: "category", label: "Category", type: "select", options: ["Document", "Image", "Video"], required: true },
-    { name: "status", label: "Status", type: "select", options: ["Active", "Inactive", "Pending"], required: true },
-    { name: "tags", label: "Tags", type: "tags" }
-
+    { name: "title", label: "Title", required: true },
+    { name: "translatedTitle", label: "Translated Title" },
+    { name: "file", label: "Document File", type: "file", required: true },
+    {
+      name: "categoryName",
+      label: "Category",
+      type: "select",
+      required: true,
+      options: categories.map(name => name.name),
+    },
+    {
+      name: "departmentName",
+      label: "Department",
+      type: "select",
+      required: true,
+      options: departments.map(name => name.name),
+    }
   ];
 
-
+  if (isLoading) {
+    return (
+      <Dialog open={open} onClose={onClose}>
+        <DialogContent>
+          <MDTypography>Loading categories and departments...</MDTypography>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="md"
-      fullWidth
-    >
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
         <MDBox display="flex" alignItems="center" justifyContent="space-between">
           <MDTypography variant="h6">Add New Document</MDTypography>
-          <IconButton
-            aria-label="close"
-            onClick={onClose}
-            sx={{
-              color: (theme) => theme.palette.grey[500],
-            }}
-          >
+          <IconButton aria-label="close" onClick={onClose} sx={{ color: (theme) => theme.palette.grey[500] }}>
             <CloseIcon />
           </IconButton>
         </MDBox>
@@ -81,34 +142,28 @@ AddDocumentForm.propTypes = {
   onClose: PropTypes.func.isRequired
 };
 
-// DocumentsDataTable Component
 function DocumentsDataTable({ onRowClick }) {
-  const API_URL = useMemo(() => `${BASE_URL}/api/documents`, []);
+  const API_URL = useMemo(() => `${DOCUMENTS_BASE_URL}/api/documents`, []);
 
   const columns = useMemo(() => [
     { field: "id", headerName: "ID", width: "10%" },
-    { field: "name", headerName: "Name", width: "15%" },
-    { field: "description", headerName: "Description", width: "20%" },
-    { field: "category", headerName: "Category", width: "10%" },
-    { field: "status", headerName: "Status", width: "10%" },
+    { field: "title", headerName: "Title", width: "20%" },
+    { field: "translatedTitle", headerName: "Translated Title", width: "20%" },
     {
-      field: "tags",
-      headerName: "Tags",
-      width: "15%"
-
+      field: "fileUrl",
+      headerName: "File",
+      width: "20%",
+      renderCell: (row) =>
+        row.presignedUrl ? (
+          <a href={row.presignedUrl} target="_blank" rel="noopener noreferrer">
+            Download
+          </a>
+        ) : (
+          "-"
+        ),
     },
-    {
-      field: "createdAt",
-      headerName: "Created",
-      width: "10%",
-      renderCell: (row) => new Date(row.createdAt).toLocaleDateString()
-    },
-    {
-      field: "updatedAt",
-      headerName: "Updated",
-      width: "10%",
-      renderCell: (row) => new Date(row.updatedAt).toLocaleDateString()
-    }
+    { field: "categoryName", headerName: "Category", width: "15%" },
+    { field: "departmentName", headerName: "Department", width: "15%" },
   ], []);
 
   return (
@@ -128,11 +183,10 @@ DocumentsDataTable.propTypes = {
   onRowClick: PropTypes.func.isRequired,
 };
 
-// Documents Component
 function Documents() {
   const navigate = useNavigate();
   const [formOpen, setFormOpen] = useState(false);
-  const [controller, dispatch] = useMaterialUIController();
+  const [controller] = useMaterialUIController();
   const { sidenavColor } = controller;
 
   const handleRowClick = (row) => {
@@ -170,9 +224,7 @@ function Documents() {
           </Grid>
         </Grid>
       </MDBox>
-
       <AddDocumentForm open={formOpen} onClose={handleCloseForm} />
-
     </DashboardLayout>
   );
 }
