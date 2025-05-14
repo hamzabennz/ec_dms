@@ -120,6 +120,7 @@ const routes = [
     route: "/authentication/sign-in",
     component: <SignIn />,
   },
+  /*
   {
     type: "collapse",
     name: "Profile",
@@ -135,6 +136,7 @@ const routes = [
     route: "/user/:userId", // Dynamic route with parameter
     component: <UserProfile />,
   },
+  */
   {
     type: "route", // Using a different type so it doesn't show in the Sidenav
     name: "Document page",
