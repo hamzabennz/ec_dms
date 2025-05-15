@@ -45,7 +45,7 @@ import Profile from "layouts/profile";
 import SignIn from "layouts/authentication/sign-in";
 import SignUp from "layouts/authentication/sign-up";
 import UserProfile from "layouts/user_page/userPage";
-
+import UserProfilePage from "layouts/user_page/UserProfilePage";
 
 // @mui icons
 import Icon from "@mui/material/Icon";
@@ -145,7 +145,13 @@ const routes = [
     // Dynamic route with parameter
     component: <DocumentPage />,
   },
-
+  {
+    type: "route",
+    name: "User Profile",
+    key: "user-profile",
+    route: "/user/:id",
+    component: <UserProfilePage />,
+  },
 ];
 
 export default routes;

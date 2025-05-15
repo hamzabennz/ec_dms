@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Grid from "@mui/material/Grid";
 import Card from "@mui/material/Card";
 import MDBox from "components/MDBox";
@@ -25,6 +25,23 @@ import InputForm from "components/InputForm";
 import { useMaterialUIController } from "context";
 
 function AddUserForm({ open, onClose }) {
+  const [departments, setDepartments] = React.useState([]);
+
+  useEffect(() => {
+    if (!open) return;
+    async function fetchDepartments() {
+      try {
+        const response = await fetch("http://192.168.137.254:8081/api/departments");
+        if (!response.ok) throw new Error("Failed to fetch departments");
+        const data = await response.json();
+        setDepartments(Array.isArray(data) ? data : []);
+      } catch (e) {
+        setDepartments([]);
+      }
+    }
+    fetchDepartments();
+  }, [open]);
+
   const handleSubmit = async (values) => {
     try {
       // Get token from localStorage
@@ -57,7 +74,7 @@ function AddUserForm({ open, onClose }) {
         password: values.password
       };
       // POST request
-      const response = await fetch("http://localhost/api/users", {
+      const response = await fetch("http://localhost:8080/api/users", {
         method: "POST",
         headers: {
           "Authorization": `${tokenType} ${token}`,
@@ -69,9 +86,10 @@ function AddUserForm({ open, onClose }) {
         const error = await response.text();
         throw new Error(error || "Failed to add user");
       }
-      onClose(); // Close the dialog after submission
+      onClose(true); // Close the dialog after submission and trigger table refresh
     } catch (err) {
       alert("Error adding user: " + err.message);
+      onClose(false);
     }
   };
 
@@ -88,7 +106,13 @@ function AddUserForm({ open, onClose }) {
     },
     { name: "email", label: "Email", type: "email", required: true },
     { name: "phone", label: "Phone Number", required: true },
-    { name: "department", label: "Department", required: true },
+    {
+      name: "department",
+      label: "Department",
+      type: "select",
+      options: departments.map(dep => dep.name),
+      required: true
+    },
     { name: "hire_date", label: "Hire Date", type: "date", required: true },
     { name: "password", label: "Password", type: "password", required: true }
   ];
@@ -171,6 +195,7 @@ function Tables() {
   const [formOpen, setFormOpen] = useState(false);
   const [controller, dispatch] = useMaterialUIController();
   const { sidenavColor } = controller;
+  const [tableKey, setTableKey] = useState(0); // force DataTable refresh
 
   const handleRowClick = (row) => {
     history.navigate(`/user/${row.id}`);
@@ -180,8 +205,9 @@ function Tables() {
     setFormOpen(true);
   };
 
-  const handleCloseForm = () => {
+  const handleCloseForm = (userAdded) => {
     setFormOpen(false);
+    if (userAdded) setTableKey((k) => k + 1); // refresh table if user was added
   };
 
   return (
@@ -201,7 +227,7 @@ function Tables() {
                 </MDButton>
               </MDBox>
               <MDBox pt={3}>
-                <EmployeeDataTable onRowClick={handleRowClick} />
+                <EmployeeDataTable key={tableKey} onRowClick={handleRowClick} />
               </MDBox>
             </Card>
           </Grid>
