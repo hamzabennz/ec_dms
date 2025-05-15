@@ -83,7 +83,8 @@ export default function DataTable({
         size: rowsPerPage.toString(),
       };
       filters.forEach((filter) => {
-        if (["name", "email", "department"].includes(filter.key)) {
+        // Support all filter fields, not just name/email/department
+        if (filter.key && filter.value) {
           query[filter.key] = filter.value;
         }
       });
@@ -126,7 +127,11 @@ export default function DataTable({
         console.error("Failed to parse response as JSON:", text);
       }
       console.log("Backend response:", result);
-      if (result.content) {
+      // Support both {users: [...], totalItems, ...} and {content: [...], totalElements, ...}
+      if (result.users) {
+        setData(result.users);
+        setTotalRows(result.totalItems || result.users.length);
+      } else if (result.content) {
         setData(result.content);
         setTotalRows(result.totalElements || result.content.length);
       } else if (Array.isArray(result)) {

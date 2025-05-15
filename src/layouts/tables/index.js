@@ -57,7 +57,7 @@ function AddUserForm({ open, onClose }) {
         password: values.password
       };
       // POST request
-      const response = await fetch("http://10.80.12.171:8080/auth/api/users", {
+      const response = await fetch("http://localhost/api/users", {
         method: "POST",
         headers: {
           "Authorization": `${tokenType} ${token}`,
@@ -145,7 +145,7 @@ function EmployeeDataTable({ onRowClick }) {
 
   return (
     <DataTable
-      apiUrl="http://10.80.12.171:8080/auth/api/users"
+      apiUrl="http://localhost:8080/api/users/paged"
       columns={columns}
       title="Users Table"
       onRowClick={onRowClick}
@@ -153,6 +153,11 @@ function EmployeeDataTable({ onRowClick }) {
       enableFilters
       enablePagination
       searchField="name"
+      filterFields={["name", "email", "department", "status", "position"]}
+      pagination
+      pageSize={10}
+      sortBy="id"
+      sortDir="asc"
     />
   );
 }

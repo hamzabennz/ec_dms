@@ -15,6 +15,7 @@ Coded by www.creative-tim.com
 
 import { useState, useEffect, useMemo } from "react";
 import PrivateRoute from "components/PrivateRoute";
+import AdminRoute from "components/PrivateRoute/AdminRoute";
 
 // react-router components
 import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
@@ -139,6 +140,10 @@ export default function App() {
         }
 
         if (route.route) {
+          // Protect /users with AdminRoute
+          if (route.route === "/users") {
+            return <Route exact path={route.route} element={<AdminRoute>{route.component}</AdminRoute>} key={route.key} />;
+          }
           return <Route exact path={route.route} element={route.component} key={route.key} />;
         }
 
