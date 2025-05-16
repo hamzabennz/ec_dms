@@ -1,4 +1,5 @@
 import IAuthRepository from "./IAuthRepository";
+import { USERS_BASE_URL } from "static/baseUrl";
 
 class MockAuthRepository extends IAuthRepository {
   constructor() {
@@ -9,7 +10,7 @@ class MockAuthRepository extends IAuthRepository {
 
   async login(username, password) {
     try {
-      const response = await fetch("http://localhost:8080/api/auth/login", {
+      const response = await fetch(`${USERS_BASE_URL}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
