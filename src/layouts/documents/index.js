@@ -30,6 +30,7 @@ function AddDocumentForm({ open, onClose }) {
     const fetchData = async () => {
       try {
         const [categoriesRes, departmentsRes] = await Promise.all([
+
           fetch(`${DOCUMENTS_BASE_URL}/api/categories`),
           fetch(`${DOCUMENTS_BASE_URL}/api/departments`),
         ]);
@@ -96,8 +97,7 @@ function AddDocumentForm({ open, onClose }) {
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
         throw new Error(
-          `HTTP error! status: ${response.status}${
-            errorData ? ` - ${JSON.stringify(errorData)}` : ""
+          `HTTP error! status: ${response.status}${errorData ? ` - ${JSON.stringify(errorData)}` : ""
           }`
         );
       }

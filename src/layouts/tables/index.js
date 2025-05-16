@@ -23,7 +23,7 @@ import { history } from '../../utils/history';
 
 import InputForm from "components/InputForm";
 import { useMaterialUIController } from "context";
-import { USERS_BASE_URL } from "static/baseUrl";
+import { USERS_BASE_URL , DOCUMENTS_BASE_URL } from "static/baseUrl";
 
 function AddUserForm({ open, onClose }) {
   const [departments, setDepartments] = React.useState([]);
@@ -32,7 +32,7 @@ function AddUserForm({ open, onClose }) {
     if (!open) return;
     async function fetchDepartments() {
       try {
-        const response = await fetch("http://192.168.137.254:8081/api/departments");
+        const response = await fetch(`${DOCUMENTS_BASE_URL}/api/departments`);
         if (!response.ok) throw new Error("Failed to fetch departments");
         const data = await response.json();
         setDepartments(Array.isArray(data) ? data : []);
