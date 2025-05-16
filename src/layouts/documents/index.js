@@ -30,8 +30,9 @@ function AddDocumentForm({ open, onClose }) {
     const fetchData = async () => {
       try {
         const [categoriesRes, departmentsRes] = await Promise.all([
-          fetch("http://10.80.12.171:8080/documents/api/categories"),
-          fetch("http://10.80.12.171:8080/documents/api/departments"),
+          
+          fetch(`${DOCUMENTS_BASE_URL}/api/categories`),
+          fetch(`${DOCUMENTS_BASE_URL}/api/departments`),
         ]);
 
         const [categoriesData, departmentsData] = await Promise.all([
