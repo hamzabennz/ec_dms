@@ -46,7 +46,7 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
-
+import { DOCUMENTS_BASE_URL } from "static/baseUrl";
 // Base API URL
 import BASE_URL from 'static/baseUrl';
 
@@ -142,8 +142,8 @@ function getDocumentIcon(fileType) {
 }
 
 function DocumentPage() {
-    const { documentId } = useParams();
     const navigate = useNavigate();
+    const { documentId } = useParams();
     const [document, setDocument] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
     const [editedDocument, setEditedDocument] = useState(null);
@@ -154,6 +154,8 @@ function DocumentPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
+    const [categories, setCategories] = useState([]);
+    const [departments, setDepartments] = useState([]);
 
     // Mock history data for the History tab
     const historyColumns = [
@@ -232,50 +234,39 @@ function DocumentPage() {
         const fetchDocument = async () => {
             setLoading(true);
             try {
-                // Mock data for development
-                const mockDocument = {
-                    id: documentId,
-                    name: "Annual Report 2023.pdf",
-                    type: "pdf",
-                    size: "3.5 MB",
-                    created_date: "2023-10-15",
-                    modified_date: "2023-10-20",
-                    created_by: "John Smith",
-                    modified_by: "Jane Doe",
-                    version: "1.2",
-                    status: "Active",
-                    category: "Reports",
-                    description: "Annual financial report for fiscal year 2023 including revenue projections and market analysis.",
-                    tags: ["financial", "annual", "2023", "report"],
-                    access_level: "Restricted",
-                    location: "/Users/tarekbn/Downloads/hackathon[1].pdf",
-                    preview_available: true
-                };
+                const response = await fetch(`${DOCUMENTS_BASE_URL}/api/documents/${documentId}`);
+                const data = await response.json();
 
-                setDocument(mockDocument);
-                setEditedDocument(mockDocument);
-                // For a PDF document, we could set a preview URL
-                setPreviewUrl(`${BASE_URL}/api/documents/preview/${documentId}`);
+                if (response.ok) {
+                    setDocument({
+                        ...data,
+                        // Transform API response to match UI requirements
+                        name: data.title,
+                        type: data.fileUrl ? data.fileUrl.split('.').pop().toLowerCase() : 'unknown',
+                        created_date: new Date().toISOString(),
+                        modified_date: new Date().toISOString(),
+                        created_by: "System User",
+                        modified_by: "System User",
+                        version: "1.0",
+                        status: "Active",
+                        description: data.translatedTitle || "No description available",
+                        tags: [], // Initialize empty tags array
+                        access_level: "Restricted",
+                        location: data.fileUrl,
+                        categoryName: data.categoryName,
+                        departmentName: data.departmentName,
+                        // Store the presigned URL for preview/download
+                        presignedUrl: data.presignedUrl
+                    });
 
-                // In a real app, fetch from API
-                /*
-                const url = `${BASE_URL}/api/documents/${documentId}`;
-                const response = await fetch(url);
-                const responseData = await response.json();
-                
-                if (responseData.status === "success") {
-                  setDocument(responseData.data);
-                  setEditedDocument(responseData.data);
-                  
-                  if (responseData.data.preview_available) {
-                    setPreviewUrl(`${BASE_URL}/api/documents/preview/${documentId}`);
-                  }
+                    if (data.presignedUrl) {
+                        setPreviewUrl(data.presignedUrl);
+                    }
                 } else {
-                  setError("Document not found");
+                    setError(`Failed to fetch document: ${response.statusText}`);
                 }
-                */
             } catch (error) {
-                console.error("Error fetching document data:", error);
+                console.error("Error fetching document:", error);
                 setError("Failed to load document data");
             } finally {
                 setLoading(false);
@@ -287,21 +278,76 @@ function DocumentPage() {
         }
     }, [documentId]);
 
+    useEffect(() => {
+        const fetchCategoriesAndDepartments = async () => {
+            try {
+                const [categoriesRes, departmentsRes] = await Promise.all([
+                    fetch(`${DOCUMENTS_BASE_URL}/api/categories`),
+                    fetch(`${DOCUMENTS_BASE_URL}/api/departments`)
+                ]);
+
+                const [categoriesData, departmentsData] = await Promise.all([
+                    categoriesRes.json(),
+                    departmentsRes.json()
+                ]);
+
+                setCategories(categoriesData);
+                setDepartments(departmentsData);
+            } catch (error) {
+                console.error("Error fetching categories and departments:", error);
+                setError("Failed to load categories and departments");
+            }
+        };
+
+        fetchCategoriesAndDepartments();
+    }, []); // Empty dependency array means this runs once when component mounts
+
     const handleTabChange = (event, newValue) => {
         setTabValue(newValue);
     };
 
-    const handleEditToggle = () => {
+    const handleEditToggle = async () => {
         if (!isEditing) {
-            // When opening the edit form, make sure editedDocument is a fresh copy of document
             setEditedDocument({ ...document });
+            setIsEditing(true);
         } else {
-            // When saving, update the document with the edited values
-            // In a real app, you'd send an API update request here
-            setDocument(editedDocument);
-            // TODO: API call to update document
+            try {
+                // Create FormData object for the update
+                const formData = new FormData();
+                formData.append('title', editedDocument.title);
+                formData.append('translatedTitle', editedDocument.translatedTitle || '');
+                formData.append('categoryName', editedDocument.categoryName);
+                formData.append('departmentName', editedDocument.departmentName);
+             consoleg('FormData:', formData);
+                // Make the PUT request
+                const response = await fetch(`${DOCUMENTS_BASE_URL}/api/documents/${documentId}`, {
+                    method: 'PUT',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to update document: ${response.statusText}`);
+                }
+
+                // Get the updated document data
+                const updatedDoc = await response.json();
+                
+                // Update the document state with the response
+                setDocument({
+                    ...updatedDoc,
+                    name: updatedDoc.title,
+                    type: updatedDoc.fileUrl ? updatedDoc.fileUrl.split('.').pop().toLowerCase() : 'unknown',
+                    description: updatedDoc.translatedTitle || "No description available",
+                });
+
+                // Close the edit mode
+                setIsEditing(false);
+            } catch (error) {
+                console.error('Error updating document:', error);
+                // You might want to show an error message to the user here
+                setError("Failed to update document");
+            }
         }
-        setIsEditing(!isEditing);
     };
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -320,12 +366,26 @@ function DocumentPage() {
 
     const handleDeleteDocument = async () => {
         try {
-            // In a real app, delete the document via API
-            // await fetch(`${BASE_URL}/api/documents/${documentId}`, { method: 'DELETE' });
-            setDeleteDialogOpen(false);
-            navigate('/documents'); // Navigate back to documents page
+            const response = await fetch(`${DOCUMENTS_BASE_URL}/api/documents/${documentId}`, {
+                method: 'DELETE',
+            });
+
+            if (response.ok) {
+                // Close the dialog and navigate back to documents list
+                setDeleteDialogOpen(false);
+                navigate('/documents');
+            } else {
+                const errorData = await response.json().catch(() => null);
+                throw new Error(
+                    `Failed to delete document: ${response.status}${
+                        errorData ? ` - ${JSON.stringify(errorData)}` : ''
+                    }`
+                );
+            }
         } catch (error) {
             console.error("Error deleting document:", error);
+            // You might want to show an error message to the user here
+            setError("Failed to delete document");
         }
     };
 
@@ -369,6 +429,88 @@ function DocumentPage() {
         );
     }
 
+    // Update the edit dialog to handle loading state for categories/departments
+    const renderEditDialog = () => (
+        <Dialog
+            open={isEditing}
+            onClose={() => setIsEditing(false)}
+            maxWidth="md"
+            fullWidth
+        >
+            <DialogTitle>Edit Document Information</DialogTitle>
+            <DialogContent>
+                <MDBox py={2}>
+                    <Grid container spacing={2}>
+                        <Grid item xs={12} md={6}>
+                            <MDInput
+                                fullWidth
+                                label="Title"
+                                name="title"
+                                value={editedDocument?.title || ""}
+                                onChange={handleInputChange}
+                            />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                            <MDInput
+                                fullWidth
+                                label="Translated Title"
+                                name="translatedTitle"
+                                value={editedDocument?.translatedTitle || ""}
+                                onChange={handleInputChange}
+                            />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                            <MDInput
+                                select
+                                SelectProps={{
+                                    native: true,
+                                }}
+                                fullWidth
+                                label="Category"
+                                name="categoryName"
+                                value={editedDocument?.categoryName || ""}
+                                onChange={handleInputChange}
+                            >
+                                {categories.map((category) => (
+                                    <option key={category.id} value={category.name}>
+                                        {category.name}
+                                    </option>
+                                ))}
+                            </MDInput>
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                            <MDInput
+                                select
+                                SelectProps={{
+                                    native: true,
+                                }}
+                                fullWidth
+                                label="Department"
+                                name="departmentName"
+                                value={editedDocument?.departmentName || ""}
+                                onChange={handleInputChange}
+                            >
+                                {departments.map((department) => (
+                                    <option key={department.id} value={department.name}>
+                                        {department.name}
+                                    </option>
+                                ))}
+                            </MDInput>
+                        </Grid>
+                    </Grid>
+                </MDBox>
+            </DialogContent>
+            <DialogActions>
+                <MDButton onClick={() => setIsEditing(false)} color="secondary">
+                    Cancel
+                </MDButton>
+                <MDButton onClick={handleEditToggle} color="info">
+                    Save Changes
+                </MDButton>
+            </DialogActions>
+        </Dialog>
+    );
+
     return (
         <DashboardLayout>
             <DashboardNavbar />
@@ -387,27 +529,24 @@ function DocumentPage() {
                         <InfoCard
                             title="Document Information"
                             info={{
-                                "Filename": document.name,
+                                "Title": document.title,
                                 "Type": document.type.toUpperCase(),
-                                "Size": document.size,
-                                "Version": document.version,
-                                "Status": document.status,
-                                "Category": document.category,
+                                "Category": document.categoryName,
+                                "Department": document.departmentName,
+                                "Translated Title": document.translatedTitle || "N/A",
                             }}
                         />
                     </Grid>
 
-                    {/* Dates & Ownership */}
+                    {/* File Details */}
                     <Grid item xs={12} md={6} xl={4}>
                         <InfoCard
-                            title="Dates & Ownership"
+                            title="File Details"
                             info={{
+                                "File URL": document.fileUrl,
                                 "Created Date": new Date(document.created_date).toLocaleDateString(),
-                                "Created By": document.created_by,
                                 "Modified Date": new Date(document.modified_date).toLocaleDateString(),
-                                "Modified By": document.modified_by,
                                 "Access Level": document.access_level,
-                                "Location": document.location,
                             }}
                         />
                     </Grid>
@@ -477,148 +616,12 @@ function DocumentPage() {
                     </Grid>
 
                     {/* Add this dialog for editing: */}
-                    <Dialog
-                        open={isEditing}
-                        onClose={() => setIsEditing(false)}
-                        maxWidth="md"
-                        fullWidth
-                    >
-                        <DialogTitle>Edit Document Information</DialogTitle>
-                        <DialogContent>
-                            <MDBox py={2}>
-                                <Grid container spacing={2}>
-                                    <Grid item xs={12} md={6}>
-                                        <MDInput
-                                            fullWidth
-                                            label="Document Name"
-                                            name="name"
-                                            value={editedDocument?.name || ""}
-                                            onChange={handleInputChange}
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} md={6}>
-                                        <MDInput
-                                            fullWidth
-                                            label="Category"
-                                            name="category"
-                                            value={editedDocument?.category || ""}
-                                            onChange={handleInputChange}
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} md={6}>
-                                        <MDInput
-                                            select
-                                            SelectProps={{
-                                                native: true,
-                                            }}
-                                            fullWidth
-                                            label="Status"
-                                            name="status"
-                                            value={editedDocument?.status || ""}
-                                            onChange={handleInputChange}
-                                        >
-                                            <option value="Active">Active</option>
-                                            <option value="Archived">Archived</option>
-                                            <option value="Draft">Draft</option>
-                                        </MDInput>
-                                    </Grid>
-                                    <Grid item xs={12} md={6}>
-                                        <MDInput
-                                            select
-                                            SelectProps={{
-                                                native: true,
-                                            }}
-                                            fullWidth
-                                            label="Access Level"
-                                            name="access_level"
-                                            value={editedDocument?.access_level || ""}
-                                            onChange={handleInputChange}
-                                        >
-                                            <option value="Public">Public</option>
-                                            <option value="Restricted">Restricted</option>
-                                            <option value="Private">Private</option>
-                                        </MDInput>
-                                    </Grid>
-                                    <Grid item xs={12}>
-                                        <MDInput
-                                            fullWidth
-                                            label="Location"
-                                            name="location"
-                                            value={editedDocument?.location || ""}
-                                            onChange={handleInputChange}
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12}>
-                                        <MDInput
-                                            fullWidth
-                                            label="Tags (comma separated)"
-                                            name="tags"
-                                            value={editedDocument?.tags?.join(', ') || ""}
-                                            onChange={handleTagsChange}
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12}>
-                                        <MDInput
-                                            fullWidth
-                                            multiline
-                                            rows={4}
-                                            label="Description"
-                                            name="description"
-                                            value={editedDocument?.description || ""}
-                                            onChange={handleInputChange}
-                                        />
-                                    </Grid>
-                                </Grid>
-                            </MDBox>
-                        </DialogContent>
-                        <DialogActions>
-                            <MDButton onClick={() => setIsEditing(false)} color="secondary">
-                                Cancel
-                            </MDButton>
-                            <MDButton onClick={handleEditToggle} color="info">
-                                Save Changes
-                            </MDButton>
-                        </DialogActions>
-                    </Dialog>
+                    {renderEditDialog()}
                 </Grid>
             </MDBox>
 
             {/* Document Content & Details */}
             <Grid container spacing={3}>
-                {/* Document Preview */}
-                <Grid item xs={12}>
-                    <Card>
-                        <MDBox p={3}>
-                            <MDTypography variant="h6" fontWeight="medium" mb={2}>
-                                Document Preview
-                            </MDTypography>
-                            {previewUrl ? (
-                                <MDBox
-                                    component="iframe"
-                                    src={previewUrl}
-                                    width="100%"
-                                    height="500px"
-                                    sx={{ border: "1px solid #eee", borderRadius: "8px" }}
-                                    title="Document preview"
-                                />
-                            ) : (
-                                <MDBox
-                                    display="flex"
-                                    justifyContent="center"
-                                    alignItems="center"
-                                    height="200px"
-                                    bgcolor="grey.100"
-                                    borderRadius="lg"
-                                >
-                                    <MDTypography variant="button" color="text">
-                                        Preview not available for this document type
-                                    </MDTypography>
-                                </MDBox>
-                            )}
-                        </MDBox>
-                    </Card>
-                </Grid>
-
                 {/* Document Metadata */}
                 <Grid item xs={12}>
                     <Card>
@@ -717,14 +720,18 @@ function DocumentPage() {
                 <DialogTitle>Confirm Document Deletion</DialogTitle>
                 <DialogContent>
                     <DialogContentText>
-                        Are you sure you want to delete &ldquo;{document.name}&rdquo;? This action cannot be undone.
+                        Are you sure you want to delete &quot;{document.name}&quot;? This action cannot be undone.
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
                     <MDButton onClick={() => setDeleteDialogOpen(false)} color="secondary">
                         Cancel
                     </MDButton>
-                    <MDButton onClick={handleDeleteDocument} color="error" autoFocus>
+                    <MDButton 
+                        onClick={handleDeleteDocument} 
+                        color="error" 
+                        autoFocus
+                    >
                         Delete
                     </MDButton>
                 </DialogActions>
