@@ -16,15 +16,14 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import InputForm from "components/InputForm";
 import PropTypes from "prop-types";
+import { DOCUMENTS_BASE_URL } from "static/baseUrl";
 
 // ✅ FIXED: Added http:// and consistent naming
-const API_BASE_URL = "http://192.168.137.254:8081/api/departments";
+const API_BASE_URL = `${DOCUMENTS_BASE_URL}/api/departments`;
 
 // 🔹 Modal Form Component
 function DepartmentForm({ open, onClose, onSubmit, initialData }) {
-  const formInputs = [
-    { name: "name", label: "Department Name", required: true },
-  ];
+  const formInputs = [{ name: "name", label: "Department Name", required: true }];
 
   const safeInitialData = initialData || { name: "" };
 
@@ -32,9 +31,7 @@ function DepartmentForm({ open, onClose, onSubmit, initialData }) {
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>
         <MDBox display="flex" justifyContent="space-between" alignItems="center">
-          <MDTypography variant="h6">
-            {safeInitialData.id ? "Edit" : "Add"} Department
-          </MDTypography>
+          <MDTypography variant="h6">{safeInitialData.id ? "Edit" : "Add"} Department</MDTypography>
           <IconButton onClick={onClose}>
             <CloseIcon />
           </IconButton>
@@ -155,43 +152,77 @@ function DepartementTables() {
                 </MDButton>
               </MDBox>
               <MDBox px={2} pb={2}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-  <thead>
-    <tr>
-      <th style={{ padding: "12px", borderBottom: "1px solid #ccc", textAlign: "left" }}>ID</th>
-      <th style={{ padding: "12px", borderBottom: "1px solid #ccc", textAlign: "left" }}>Name</th>
-      <th style={{ padding: "12px", borderBottom: "1px solid #ccc", textAlign: "left" }}>Actions</th>
-    </tr>
-  </thead>
-  <tbody>
-    {departments.map((dept) => (
-      <tr key={dept.id}>
-        <td style={{ padding: "12px", textAlign: "left", verticalAlign: "middle" }}>{dept.id}</td>
-        <td style={{ padding: "12px", textAlign: "left", verticalAlign: "middle" }}>{dept.name}</td>
-        <td style={{ padding: "12px", textAlign: "left", verticalAlign: "middle", whiteSpace: "nowrap" }}>
-          <MDButton
-            size="small"
-            variant="text"
-            color="warning"
-            onClick={() => handleEditClick(dept)}
-            sx={{ marginRight: 1 }}
-          >
-            Edit
-          </MDButton>
-          <MDButton
-            size="small"
-            variant="text"
-            color="error"
-            onClick={() => handleDeleteClick(dept.id)}
-          >
-            Delete
-          </MDButton>
-        </td>
-      </tr>
-    ))}
-  </tbody>
-</table>
-
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr>
+                      <th
+                        style={{
+                          padding: "12px",
+                          borderBottom: "1px solid #ccc",
+                          textAlign: "left",
+                        }}
+                      >
+                        ID
+                      </th>
+                      <th
+                        style={{
+                          padding: "12px",
+                          borderBottom: "1px solid #ccc",
+                          textAlign: "left",
+                        }}
+                      >
+                        Name
+                      </th>
+                      <th
+                        style={{
+                          padding: "12px",
+                          borderBottom: "1px solid #ccc",
+                          textAlign: "left",
+                        }}
+                      >
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {departments.map((dept) => (
+                      <tr key={dept.id}>
+                        <td style={{ padding: "12px", textAlign: "left", verticalAlign: "middle" }}>
+                          {dept.id}
+                        </td>
+                        <td style={{ padding: "12px", textAlign: "left", verticalAlign: "middle" }}>
+                          {dept.name}
+                        </td>
+                        <td
+                          style={{
+                            padding: "12px",
+                            textAlign: "left",
+                            verticalAlign: "middle",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <MDButton
+                            size="small"
+                            variant="text"
+                            color="warning"
+                            onClick={() => handleEditClick(dept)}
+                            sx={{ marginRight: 1 }}
+                          >
+                            Edit
+                          </MDButton>
+                          <MDButton
+                            size="small"
+                            variant="text"
+                            color="error"
+                            onClick={() => handleDeleteClick(dept.id)}
+                          >
+                            Delete
+                          </MDButton>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </MDBox>
             </Card>
           </Grid>

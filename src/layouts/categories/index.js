@@ -16,15 +16,14 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import InputForm from "components/InputForm";
 import PropTypes from "prop-types";
+import { DOCUMENTS_BASE_URL } from "static/baseUrl";
 
 // ✅ Replace with your actual categories API base URL
-const API_BASE_URL = "http://192.168.137.254:8081/api/categories";
+const API_BASE_URL = `${DOCUMENTS_BASE_URL}/api/categories`;
 
 // 🔹 Modal Form Component
 function CategoryForm({ open, onClose, onSubmit, initialData }) {
-  const formInputs = [
-    { name: "name", label: "Category Name", required: true },
-  ];
+  const formInputs = [{ name: "name", label: "Category Name", required: true }];
 
   const safeInitialData = initialData || { name: "" };
 
@@ -32,9 +31,7 @@ function CategoryForm({ open, onClose, onSubmit, initialData }) {
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>
         <MDBox display="flex" justifyContent="space-between" alignItems="center">
-          <MDTypography variant="h6">
-            {safeInitialData.id ? "Edit" : "Add"} Category
-          </MDTypography>
+          <MDTypography variant="h6">{safeInitialData.id ? "Edit" : "Add"} Category</MDTypography>
           <IconButton onClick={onClose}>
             <CloseIcon />
           </IconButton>
@@ -114,9 +111,7 @@ function CategorieTables() {
   const handleFormSubmit = async (values) => {
     try {
       const isEdit = !!selectedCategory;
-      const url = isEdit
-        ? `${API_BASE_URL}/${selectedCategory.id}`
-        : API_BASE_URL;
+      const url = isEdit ? `${API_BASE_URL}/${selectedCategory.id}` : API_BASE_URL;
 
       const res = await fetch(url, {
         method: isEdit ? "PUT" : "POST",
@@ -152,17 +147,52 @@ function CategorieTables() {
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr>
-                      <th style={{ padding: "12px", borderBottom: "1px solid #ccc", textAlign: "left" }}>ID</th>
-                      <th style={{ padding: "12px", borderBottom: "1px solid #ccc", textAlign: "left" }}>Name</th>
-                      <th style={{ padding: "12px", borderBottom: "1px solid #ccc", textAlign: "left" }}>Actions</th>
+                      <th
+                        style={{
+                          padding: "12px",
+                          borderBottom: "1px solid #ccc",
+                          textAlign: "left",
+                        }}
+                      >
+                        ID
+                      </th>
+                      <th
+                        style={{
+                          padding: "12px",
+                          borderBottom: "1px solid #ccc",
+                          textAlign: "left",
+                        }}
+                      >
+                        Name
+                      </th>
+                      <th
+                        style={{
+                          padding: "12px",
+                          borderBottom: "1px solid #ccc",
+                          textAlign: "left",
+                        }}
+                      >
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {categories.map((cat) => (
                       <tr key={cat.id}>
-                        <td style={{ padding: "12px", textAlign: "left", verticalAlign: "middle" }}>{cat.id}</td>
-                        <td style={{ padding: "12px", textAlign: "left", verticalAlign: "middle" }}>{cat.name}</td>
-                        <td style={{ padding: "12px", textAlign: "left", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                        <td style={{ padding: "12px", textAlign: "left", verticalAlign: "middle" }}>
+                          {cat.id}
+                        </td>
+                        <td style={{ padding: "12px", textAlign: "left", verticalAlign: "middle" }}>
+                          {cat.name}
+                        </td>
+                        <td
+                          style={{
+                            padding: "12px",
+                            textAlign: "left",
+                            verticalAlign: "middle",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
                           <MDButton
                             size="small"
                             variant="text"
