@@ -16,7 +16,7 @@ import PropTypes from "prop-types";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
-import DataTable from "examples/Tables/DataTable";
+import DataTable from "layouts/documents/components/DataTable";
 import InputForm from "components/InputForm";
 import { DOCUMENTS_BASE_URL } from "static/baseUrl";
 import { useMaterialUIController } from "../../context";
@@ -30,8 +30,8 @@ function AddDocumentForm({ open, onClose }) {
     const fetchData = async () => {
       try {
         const [categoriesRes, departmentsRes] = await Promise.all([
-          fetch("http://10.80.12.171:8080/documents/api/categories"),
-          fetch("http://10.80.12.171:8080/documents/api/departments"),
+          fetch(`${DOCUMENTS_BASE_URL}/api/categories`),
+          fetch(`${DOCUMENTS_BASE_URL}/api/departments`),
         ]);
 
         const [categoriesData, departmentsData] = await Promise.all([
@@ -58,7 +58,7 @@ function AddDocumentForm({ open, onClose }) {
       const formData = new FormData();
       formData.append("title", values.title);
       formData.append("translatedTitle", values.translatedTitle || "");
-      
+
       // Make sure values.file is the actual File object, not just the path
       if (values.file instanceof File) {
         formData.append("file", values.file);
@@ -67,9 +67,9 @@ function AddDocumentForm({ open, onClose }) {
       }
 
       // Find the selected category and department objects
-      const selectedCategory = categories.find(cat => cat.name === values.categoryName);
-      const selectedDepartment = departments.find(dept => dept.name === values.departmentName);
-      
+      const selectedCategory = categories.find((cat) => cat.name === values.categoryName);
+      const selectedDepartment = departments.find((dept) => dept.name === values.departmentName);
+
       if (!selectedCategory || !selectedDepartment) {
         throw new Error("Category or Department not found");
       }
@@ -84,7 +84,7 @@ function AddDocumentForm({ open, onClose }) {
         fileName: values.file.name,
         fileSize: values.file.size,
         categoryId: selectedCategory.id,
-        departmentId: selectedDepartment.id
+        departmentId: selectedDepartment.id,
       });
 
       const response = await fetch(`${DOCUMENTS_BASE_URL}/api/documents?userId=1`, {
@@ -95,7 +95,11 @@ function AddDocumentForm({ open, onClose }) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
-        throw new Error(`HTTP error! status: ${response.status}${errorData ? ` - ${JSON.stringify(errorData)}` : ''}`);
+        throw new Error(
+          `HTTP error! status: ${response.status}${
+            errorData ? ` - ${JSON.stringify(errorData)}` : ""
+          }`
+        );
       }
 
       onClose();
@@ -108,12 +112,13 @@ function AddDocumentForm({ open, onClose }) {
   const formInputs = [
     { name: "title", label: "Title", required: true },
     { name: "translatedTitle", label: "Translated Title" },
-    { 
-        name: "file", 
-        label: "Document File", 
-        type: "file", 
-        required: true,
-        accept: ".pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    {
+      name: "file",
+      label: "Document File",
+      type: "file",
+      required: true,
+      accept:
+        ".pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     },
     {
       name: "categoryName",
