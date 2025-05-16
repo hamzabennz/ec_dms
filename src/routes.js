@@ -38,11 +38,14 @@ Coded by www.creative-tim.com
 // Material Dashboard 2 React layouts
 import Dashboard from "layouts/dashboard";
 import Tables from "layouts/tables";
+import DepartementTables from "layouts/departementTables";
+import CategorieTables from "layouts/categories";
 import Billing from "layouts/billing";
 import RTL from "layouts/rtl";
 import Notifications from "layouts/notifications";
 import Profile from "layouts/profile";
 import SignIn from "layouts/authentication/sign-in";
+import UnauthorizedPage from "layouts/unauthorized";
 import SignUp from "layouts/authentication/sign-up";
 import UserProfile from "layouts/user_page/userPage";
 import UserProfilePage from "layouts/user_page/UserProfilePage";
@@ -51,6 +54,7 @@ import UserProfilePage from "layouts/user_page/UserProfilePage";
 import Icon from "@mui/material/Icon";
 import Documents from "layouts/documents";
 import DocumentPage from "layouts/document_page/documentPage";
+import { layouts } from "chart.js";
 
 const routes = [
   {
@@ -69,6 +73,18 @@ const routes = [
     route: "/users",
     component: <Tables />,
   },
+
+
+  {
+    type: "collapse",
+    name: "Departements",
+    key: "departements",
+    icon: <Icon fontSize="small">people</Icon>,
+    route: "/departements",
+    component: <DepartementTables />,
+  },
+
+
   {
     type: "collapse",
     name: "Documents",
@@ -77,6 +93,21 @@ const routes = [
     route: "/documents",
     component: <Documents />,
   },
+
+
+
+  {
+    type: "collapse",
+    name: "Categories",
+    key: "categories",
+    icon: <Icon fontSize="small">people</Icon>,
+    route: "/categories",
+    component: <CategorieTables />,
+  },
+
+
+  
+
   /*
   {
     type: "collapse",
