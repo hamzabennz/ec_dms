@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import Grid from "@mui/material/Grid";
 import Card from "@mui/material/Card";
 import MDBox from "components/MDBox";
@@ -25,10 +25,72 @@ import InputForm from "components/InputForm";
 import { useMaterialUIController } from "context";
 
 function AddUserForm({ open, onClose }) {
-  const handleSubmit = (values) => {
-    console.log("Form submitted:", values);
-    // Process form data
-    onClose(); // Close the dialog after submission
+  const [departments, setDepartments] = React.useState([]);
+
+  useEffect(() => {
+    if (!open) return;
+    async function fetchDepartments() {
+      try {
+        const response = await fetch("http://192.168.137.254:8081/api/departments");
+        if (!response.ok) throw new Error("Failed to fetch departments");
+        const data = await response.json();
+        setDepartments(Array.isArray(data) ? data : []);
+      } catch (e) {
+        setDepartments([]);
+      }
+    }
+    fetchDepartments();
+  }, [open]);
+
+  const handleSubmit = async (values) => {
+    try {
+      // Get token from localStorage
+      let token = null;
+      let tokenType = "Bearer";
+      const authData = localStorage.getItem("auth");
+      if (authData) {
+        try {
+          const authObject = JSON.parse(authData);
+          token = authObject.token || authObject.accessToken;
+          tokenType = authObject.tokenType || "Bearer";
+        } catch (e) {
+          console.error("Error parsing auth data:", e);
+        }
+      }
+      if (!token) {
+        alert("Authentication token missing. Please log in again.");
+        return;
+      }
+      // Prepare user data with only required fields and correct keys
+      const userData = {
+        name: values.name,
+        position: values.position,
+        address: values.address,
+        status: values.status,
+        email: values.email,
+        phone: values.phone,
+        department: values.department,
+        hireDate: values.hire_date, // from form input
+        password: values.password
+      };
+      // POST request
+      const response = await fetch("http://localhost:8080/api/users", {
+        method: "POST",
+        headers: {
+          "Authorization": `${tokenType} ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(userData)
+      });
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error || "Failed to add user");
+      }
+      onClose(true); // Close the dialog after submission and trigger table refresh
+    } catch (err) {
+      alert("Error adding user: " + err.message);
+      onClose(false);
+    }
   };
 
   const formInputs = [
@@ -39,14 +101,20 @@ function AddUserForm({ open, onClose }) {
       name: "status",
       label: "Status",
       type: "select",
-      options: ["Active", "Inactive", "On Leave", "Suspended", "Pending"],
+      options: ["active", "inactive", "on leave", "suspended", "pending"],
       required: true
     },
     { name: "email", label: "Email", type: "email", required: true },
     { name: "phone", label: "Phone Number", required: true },
-    { name: "department", label: "Department", required: true },
+    {
+      name: "department",
+      label: "Department",
+      type: "select",
+      options: departments.map(dep => dep.name),
+      required: true
+    },
     { name: "hire_date", label: "Hire Date", type: "date", required: true },
-    { name: "employee_id", label: "Employee ID", type: "number", required: true }
+    { name: "password", label: "Password", type: "password", required: true }
   ];
 
   return (
@@ -89,32 +157,31 @@ AddUserForm.propTypes = {
 
 // EmployeeDataTable Component
 function EmployeeDataTable({ onRowClick }) {
-  const API_URL = useMemo(() => `${BASE_URL}/api/users`, []);
-
-  const columns = useMemo(() => [
+  const columns = [
     { field: "id", headerName: "ID", width: "5%" },
     { field: "name", headerName: "Name", width: "15%" },
     { field: "email", headerName: "Email", width: "20%" },
-    { field: "hire_date", headerName: "Hire Date", width: "10%" },
+    { field: "hireDate", headerName: "Hire Date", width: "10%" },
     { field: "position", headerName: "Position", width: "20%" },
     { field: "department", headerName: "Department", width: "15%" },
-    {
-      field: "status",
-      headerName: "Status",
-      width: "15%",
-      renderCell: (row) => row.status
-    },
-  ], []);
+    { field: "status", headerName: "Status", width: "15%" },
+  ];
 
   return (
     <DataTable
+      apiUrl="http://localhost:8080/api/users/paged"
       columns={columns}
-      apiUrl={API_URL}
       title="Users Table"
       onRowClick={onRowClick}
       enableSearch
       enableFilters
       enablePagination
+      searchField="name"
+      filterFields={["name", "email", "department", "status", "position"]}
+      pagination
+      pageSize={10}
+      sortBy="id"
+      sortDir="asc"
     />
   );
 }
@@ -128,6 +195,7 @@ function Tables() {
   const [formOpen, setFormOpen] = useState(false);
   const [controller, dispatch] = useMaterialUIController();
   const { sidenavColor } = controller;
+  const [tableKey, setTableKey] = useState(0); // force DataTable refresh
 
   const handleRowClick = (row) => {
     history.navigate(`/user/${row.id}`);
@@ -137,8 +205,9 @@ function Tables() {
     setFormOpen(true);
   };
 
-  const handleCloseForm = () => {
+  const handleCloseForm = (userAdded) => {
     setFormOpen(false);
+    if (userAdded) setTableKey((k) => k + 1); // refresh table if user was added
   };
 
   return (
@@ -158,7 +227,7 @@ function Tables() {
                 </MDButton>
               </MDBox>
               <MDBox pt={3}>
-                <EmployeeDataTable onRowClick={handleRowClick} />
+                <EmployeeDataTable key={tableKey} onRowClick={handleRowClick} />
               </MDBox>
             </Card>
           </Grid>
