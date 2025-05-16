@@ -23,6 +23,7 @@ import { history } from '../../utils/history';
 
 import InputForm from "components/InputForm";
 import { useMaterialUIController } from "context";
+import { USERS_BASE_URL } from "static/baseUrl";
 
 function AddUserForm({ open, onClose }) {
   const [departments, setDepartments] = React.useState([]);
@@ -74,7 +75,7 @@ function AddUserForm({ open, onClose }) {
         password: values.password
       };
       // POST request
-      const response = await fetch("http://localhost:8080/api/users", {
+      const response = await fetch(`${USERS_BASE_URL}/api/users`, {
         method: "POST",
         headers: {
           "Authorization": `${tokenType} ${token}`,
@@ -172,7 +173,7 @@ function EmployeeDataTable({ onRowClick }) {
 
   return (
     <DataTable
-      apiUrl="http://localhost:8080/api/users/paged"
+      apiUrl={`${USERS_BASE_URL}/api/users/paged`}
       columns={columns}
       title="Users Table"
       onRowClick={onRowClick}

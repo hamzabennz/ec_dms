@@ -36,7 +36,7 @@ function UserProfilePage() {
         } catch (e) {}
       }
       try {
-        const response = await fetch(`http://localhost:8080/api/users/${id}`, {
+        const response = await fetch(`${USERS_BASE_URL}/api/users/${id}`, {
           headers: token ? { Authorization: `${tokenType} ${token}` } : {},
         });
         if (!response.ok) throw new Error("Failed to fetch user");
@@ -100,14 +100,14 @@ function UserProfilePage() {
         password: form.password || user.password, // always send password
         roles: form.roles || user.roles || [], // always send roles
       };
-      const response = await fetch(`http://localhost:8080/api/users/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `${tokenType} ${token}` } : {}),
-        },
-        body: JSON.stringify(payload),
-      });
+    const response = await fetch(`${USERS_BASE_URL}/api/users/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `${tokenType} ${token}` } : {}),
+      },
+      body: JSON.stringify(payload),
+    });
       if (!response.ok) throw new Error("Failed to update user");
       const updated = await response.json();
       setUser(updated);
@@ -130,10 +130,10 @@ function UserProfilePage() {
       } catch (e) {}
     }
     try {
-      const response = await fetch(`http://localhost:8080/api/users/${id}`, {
-        method: "DELETE",
-        headers: token ? { Authorization: `${tokenType} ${token}` } : {},
-      });
+    const response = await fetch(`${USERS_BASE_URL}/api/users/${id}`, {
+      method: "DELETE",
+      headers: token ? { Authorization: `${tokenType} ${token}` } : {},
+    });
       if (!response.ok) throw new Error("Failed to delete user");
       navigate("/users");
     } catch (err) {

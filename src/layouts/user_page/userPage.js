@@ -46,6 +46,7 @@ import UserHeader from "layouts/profile/components/UserHeader";
 
 // Default avatar image
 import defaultAvatar from "assets/images/team-4.jpg";
+import { USERS_BASE_URL } from 'static/baseUrl';
 
 // Add this import at the top if not already there
 
@@ -95,7 +96,7 @@ function UserProfile() {
         const fetchUser = async () => {
             setLoading(true);
             try {
-                const url = `${BASE_URL}/api/users/get/${userId}`;
+                const url = `${USERS_BASE_URL}/api/users/${id}`;
                 const response = await fetch(url);
                 const responseData = await response.json();
 
