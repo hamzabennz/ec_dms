@@ -88,6 +88,33 @@ function InputForm({
             );
         }
 
+        // Handle multi-select inputs
+        if (input.type === "multiselect" && input.options) {
+            return (
+                <FormControl variant="standard" fullWidth key={index} required={input.required}>
+                    <InputLabel id={`${input.name}-label`}>{input.label}</InputLabel>
+                    <Select
+                        labelId={`${input.name}-label`}
+                        id={input.name}
+                        name={input.name}
+                        multiple
+                        value={formValues[input.name] || []}
+                        onChange={(e) => {
+                            setFormValues((prev) => ({ ...prev, [input.name]: e.target.value }));
+                        }}
+                        label={input.label}
+                        renderValue={(selected) => (Array.isArray(selected) ? selected.join(", ") : "")}
+                    >
+                        {input.options.map((option, optIndex) => (
+                            <MenuItem key={optIndex} value={option}>
+                                {option}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+            );
+        }
+
         // Regular input fields
         return (
             <MDInput

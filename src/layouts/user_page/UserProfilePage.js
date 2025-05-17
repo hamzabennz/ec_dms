@@ -4,11 +4,13 @@ import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
 import MDInput from "components/MDInput";
+import MDChip from "components/MDChip";
 import Card from "@mui/material/Card";
 import Grid from "@mui/material/Grid";
 import Icon from "@mui/material/Icon";
 import Dialog from "@mui/material/Dialog";
 import MenuItem from "@mui/material/MenuItem";
+import { USERS_BASE_URL } from "static/baseUrl";
 
 function UserProfilePage() {
   const { id } = useParams();
@@ -72,7 +74,13 @@ function UserProfilePage() {
     setForm(user);
   };
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    if (e.target.name === "departments") {
+      // Multi-select
+      const value = Array.from(e.target.selectedOptions, (option) => option.value);
+      setForm({ ...form, departments: value });
+    } else {
+      setForm({ ...form, [e.target.name]: e.target.value });
+    }
   };
   const handleSave = async () => {
     let token = null;
@@ -95,19 +103,19 @@ function UserProfilePage() {
         status: form.status,
         email: form.email,
         phone: form.phone,
-        department: form.department,
+        departments: Array.isArray(form.departments) ? form.departments : (form.departments ? [form.departments] : []),
         hireDate: form.hireDate ? form.hireDate.slice(0, 10) : null, // YYYY-MM-DD
         password: form.password || user.password, // always send password
         roles: form.roles || user.roles || [], // always send roles
       };
-    const response = await fetch(`${USERS_BASE_URL}/api/users/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `${tokenType} ${token}` } : {}),
-      },
-      body: JSON.stringify(payload),
-    });
+      const response = await fetch(`${USERS_BASE_URL}/api/users/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `${tokenType} ${token}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
       if (!response.ok) throw new Error("Failed to update user");
       const updated = await response.json();
       setUser(updated);
@@ -130,10 +138,10 @@ function UserProfilePage() {
       } catch (e) {}
     }
     try {
-    const response = await fetch(`${USERS_BASE_URL}/api/users/${id}`, {
-      method: "DELETE",
-      headers: token ? { Authorization: `${tokenType} ${token}` } : {},
-    });
+      const response = await fetch(`${USERS_BASE_URL}/api/users/${id}`, {
+        method: "DELETE",
+        headers: token ? { Authorization: `${tokenType} ${token}` } : {},
+      });
       if (!response.ok) throw new Error("Failed to delete user");
       navigate("/users");
     } catch (err) {
@@ -161,7 +169,7 @@ function UserProfilePage() {
                 ["name", "Name"],
                 ["email", "Email"],
                 ["position", "Position"],
-                ["department", "Department"],
+                ["departments", "Departments"],
                 ["status", "Status"],
                 ["hireDate", "Hire Date"],
                 ["address", "Address"],
@@ -170,14 +178,14 @@ function UserProfilePage() {
                 <Grid item xs={12} sm={6} key={key}>
                   <MDTypography variant="subtitle2">{label}</MDTypography>
                   {editMode ? (
-                    key === "department" ? (
+                    key === "departments" ? (
                       <select
-                        name="department"
-                        value={form.department || ""}
+                        name="departments"
+                        multiple
+                        value={form.departments || []}
                         onChange={handleChange}
-                        style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #ccc" }}
+                        style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #ccc", minHeight: 40 }}
                       >
-                        <option value="" disabled>Select department</option>
                         {departments.map(dep => (
                           <option key={dep.id} value={dep.name}>{dep.name}</option>
                         ))}
@@ -192,7 +200,14 @@ function UserProfilePage() {
                       />
                     )
                   ) : (
-                    <MDTypography>{user[key] || "-"}</MDTypography>
+                    key === "departments" ? (
+                      Array.isArray(user.departments) && user.departments.length > 0 ?
+                        user.departments.map(dep => (
+                          <MDChip key={dep} label={dep} size="small" style={{marginRight: 4, marginBottom: 2}} />
+                        )) : "-"
+                    ) : (
+                      <MDTypography>{user[key] || "-"}</MDTypography>
+                    )
                   )}
                 </Grid>
               ))}
