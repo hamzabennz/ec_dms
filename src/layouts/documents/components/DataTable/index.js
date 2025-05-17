@@ -45,6 +45,7 @@ export default function DataTable({
   enablePagination = true,
   onRowClick = null,
 }) {
+  apiUrl = apiUrl + "/filter";
   // State management (keeping original state variables)
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState([]);
@@ -79,33 +80,37 @@ export default function DataTable({
   ];
 
   useEffect(() => {
-    let isMounted = true; // Track component mount state
+    let isMounted = true;
 
     const fetchData = async () => {
       if (!apiUrl) return;
       setLoading(true);
 
       try {
-        const params = new URLSearchParams({
-          page,
-          per_page: rowsPerPage,
-          sort_by: "id",
-          order: "asc",
-        });
-
+        // Build filters array
         const filterBody = [];
         if (search) filterBody.push({ key: "title", op: "contains", value: search });
         filterBody.push(...filters);
 
-        const response = await fetch(`${apiUrl}?${params.toString()}`, {
-          method: filters.length > 0 || search ? "POST" : "GET",
+        // Create request body matching backend format
+        const requestBody = {
+          page: page - 1, // Adjust for 0-based indexing if needed
+          perPage: rowsPerPage,
+          sortBy: "id",
+          order: "desc",
+          filters: filterBody,
+        };
+
+        const response = await fetch(apiUrl, {
+          method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
           },
-          body: filters.length > 0 || search ? JSON.stringify(filterBody) : null,
+          body: JSON.stringify(requestBody),
         });
 
-        if (!isMounted) return; // Prevent state update if unmounted
+        if (!isMounted) return;
 
         const result = await response.json();
         if (result.status === "success") {
@@ -126,7 +131,7 @@ export default function DataTable({
     fetchData();
 
     return () => {
-      isMounted = false; // Cleanup function to prevent memory leaks
+      isMounted = false;
     };
   }, [apiUrl, page, rowsPerPage, filters, search]);
 
