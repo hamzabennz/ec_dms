@@ -70,7 +70,7 @@ function AddUserForm({ open, onClose }) {
         status: values.status,
         email: values.email,
         phone: values.phone,
-        department: values.department,
+        departments: Array.isArray(values.departments) ? values.departments : (values.departments ? [values.departments] : []),
         hireDate: values.hire_date, // from form input
         password: values.password
       };
@@ -108,9 +108,9 @@ function AddUserForm({ open, onClose }) {
     { name: "email", label: "Email", type: "email", required: true },
     { name: "phone", label: "Phone Number", required: true },
     {
-      name: "department",
-      label: "Department",
-      type: "select",
+      name: "departments",
+      label: "Departments",
+      type: "multiselect",
       options: departments.map(dep => dep.name),
       required: true
     },
@@ -151,9 +151,6 @@ function AddUserForm({ open, onClose }) {
   );
 }
 
-
-
-
 AddUserForm.propTypes = {
   open: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired
@@ -167,7 +164,14 @@ function EmployeeDataTable({ onRowClick }) {
     { field: "email", headerName: "Email", width: "20%" },
     { field: "hireDate", headerName: "Hire Date", width: "10%" },
     { field: "position", headerName: "Position", width: "20%" },
-    { field: "department", headerName: "Department", width: "15%" },
+    {
+      field: "departments",
+      headerName: "Departments",
+      width: "15%",
+      renderCell: (row) => Array.isArray(row.departments) && row.departments.length > 0
+        ? row.departments.map(dep => <span key={dep} style={{marginRight: 4}}><span style={{background:'#e0e0e0',borderRadius:4,padding:'2px 6px',fontSize:12}}>{dep}</span></span>)
+        : "-"
+    },
     { field: "status", headerName: "Status", width: "15%" },
   ];
 
@@ -181,7 +185,7 @@ function EmployeeDataTable({ onRowClick }) {
       enableFilters
       enablePagination
       searchField="name"
-      filterFields={["name", "email", "department", "status", "position"]}
+      filterFields={["name", "email", "departments", "status", "position"]}
       pagination
       pageSize={10}
       sortBy="id"
