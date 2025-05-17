@@ -312,40 +312,60 @@ function DocumentPage() {
             setIsEditing(true);
         } else {
             try {
+                // Find the selected category and department objects
+                const selectedCategory = categories.find(cat => cat.name === editedDocument.categoryName);
+                const selectedDepartment = departments.find(dept => dept.name === editedDocument.departmentName);
+
+                if (!selectedCategory || !selectedDepartment) {
+                    throw new Error("Category or Department not found");
+                }
+
                 // Create FormData object for the update
                 const formData = new FormData();
                 formData.append('title', editedDocument.title);
-                formData.append('translatedTitle', editedDocument.translatedTitle || '');
-                formData.append('categoryName', editedDocument.categoryName);
-                formData.append('departmentName', editedDocument.departmentName);
-             consoleg('FormData:', formData);
-                // Make the PUT request
+                formData.append('categoryId', selectedCategory.id);
+                formData.append('departmentId', selectedDepartment.id);
+                
+                // Only append translatedTitle if it exists
+                if (editedDocument.translatedTitle) {
+                    formData.append('translatedTitle', editedDocument.translatedTitle);
+                }
+
+                // Log FormData contents for debugging
+                for (let pair of formData.entries()) {
+                    console.log(pair[0] + ': ' + pair[1]);
+                }
+
                 const response = await fetch(`${DOCUMENTS_BASE_URL}/api/documents/${documentId}`, {
                     method: 'PUT',
                     body: formData
                 });
 
                 if (!response.ok) {
-                    throw new Error(`Failed to update document: ${response.statusText}`);
+                    const errorText = await response.text();
+                    throw new Error(`Failed to update document: ${errorText}`);
                 }
 
-                // Get the updated document data
                 const updatedDoc = await response.json();
-                
+
                 // Update the document state with the response
                 setDocument({
                     ...updatedDoc,
                     name: updatedDoc.title,
                     type: updatedDoc.fileUrl ? updatedDoc.fileUrl.split('.').pop().toLowerCase() : 'unknown',
                     description: updatedDoc.translatedTitle || "No description available",
+                    categoryName: selectedCategory.name,
+                    departmentName: selectedDepartment.name
                 });
 
-                // Close the edit mode
                 setIsEditing(false);
+                // Refresh the page to show updated data
+                window.location.reload();
             } catch (error) {
                 console.error('Error updating document:', error);
-                // You might want to show an error message to the user here
-                setError("Failed to update document");
+                setError(error.message);
+                // Keep the dialog open on error
+                return;
             }
         }
     };

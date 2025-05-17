@@ -88,7 +88,7 @@ function AddDocumentForm({ open, onClose }) {
         departmentId: selectedDepartment.id,
       });
 
-      const response = await fetch(`${DOCUMENTS_BASE_URL}/api/documents?userId=1`, {
+      const response = await fetch(`${DOCUMENTS_BASE_URL}/api/documents?page=1&per_page=10&userId=1`, {
         method: "POST",
         body: formData,
         // Don't set Content-Type header - browser will set it automatically with boundary
