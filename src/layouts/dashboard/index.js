@@ -1,17 +1,4 @@
-/**
-=========================================================
-* Material Dashboard 2 React - v2.2.0
-=========================================================
-
-* Product Page: https://www.creative-tim.com/product/material-dashboard-react
-* Copyright 2023 Creative Tim (https://www.creative-tim.com)
-
-Coded by www.creative-tim.com
-
- =========================================================
-
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-*/
+import { useEffect, useState } from "react";
 
 // @mui material components
 import Grid from "@mui/material/Grid";
@@ -19,139 +6,107 @@ import Grid from "@mui/material/Grid";
 // Material Dashboard 2 React components
 import MDBox from "components/MDBox";
 
-// Material Dashboard 2 React example components
+import USERS_BASE_URL from "static/baseUrl";
+
+// Layout and charts
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
-import ReportsBarChart from "examples/Charts/BarCharts/ReportsBarChart";
-import ReportsLineChart from "examples/Charts/LineCharts/ReportsLineChart";
 import ComplexStatisticsCard from "examples/Cards/StatisticsCards/ComplexStatisticsCard";
-
-// Data
-import reportsBarChartData from "layouts/dashboard/data/reportsBarChartData";
-import reportsLineChartData from "layouts/dashboard/data/reportsLineChartData";
-
-// Dashboard components
-import Projects from "layouts/dashboard/components/Projects";
-import OrdersOverview from "layouts/dashboard/components/OrdersOverview";
+import PieChart from "examples/Charts/PieChart";
+import VerticalBarChart from "examples/Charts/BarCharts/VerticalBarChart";
 
 function Dashboard() {
-  const { sales, tasks } = reportsLineChartData;
+  const [stats, setStats] = useState([]);
+  const [userDistributionChart, setUserDistributionChart] = useState(null);
+  const [userBarChart, setUserBarChart] = useState(null); // ✅ Declare this missing state
+
+
+  const User_stat_BASE_URL = `${USERS_BASE_URL}/api/departments`;
+
+  useEffect(() => {
+    // Fetch statistics cards
+    fetch(User_stat_BASE_URL, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    })
+      .then((res) => res.json())
+      .then((data) => setStats(data))
+      .catch((error) => console.error("Failed to fetch stats:", error));
+
+    // Fetch pie chart data
+    fetch("http://localhost:5000/user-distribution", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    })
+      .then((res) => res.json())
+      .then((data) => setUserDistributionChart(data))
+      .catch((error) => console.error("Failed to fetch pie chart data:", error));
+
+    // Fetch vertical bar chart data
+    fetch("http://localhost:5000/user-bar-distribution", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    })
+      .then((res) => res.json())
+      .then((data) => setUserBarChart(data))
+      .catch((error) => console.error("Failed to fetch vertical bar chart:", error));
+  }, []);
 
   return (
     <DashboardLayout>
       <DashboardNavbar />
       <MDBox py={3}>
+        {/* Top Statistics Cards */}
         <Grid container spacing={3}>
-          <Grid item xs={12} md={6} lg={3}>
-            <MDBox mb={1.5}>
-              <ComplexStatisticsCard
-                color="dark"
-                icon="weekend"
-                title="Bookings"
-                count={281}
-                percentage={{
-                  color: "success",
-                  amount: "+55%",
-                  label: "than lask week",
-                }}
-              />
-            </MDBox>
-          </Grid>
-          <Grid item xs={12} md={6} lg={3}>
-            <MDBox mb={1.5}>
-              <ComplexStatisticsCard
-                icon="leaderboard"
-                title="Today's Users"
-                count="2,300"
-                percentage={{
-                  color: "success",
-                  amount: "+3%",
-                  label: "than last month",
-                }}
-              />
-            </MDBox>
-          </Grid>
-          <Grid item xs={12} md={6} lg={3}>
-            <MDBox mb={1.5}>
-              <ComplexStatisticsCard
-                color="success"
-                icon="store"
-                title="Revenue"
-                count="34k"
-                percentage={{
-                  color: "success",
-                  amount: "+1%",
-                  label: "than yesterday",
-                }}
-              />
-            </MDBox>
-          </Grid>
-          <Grid item xs={12} md={6} lg={3}>
-            <MDBox mb={1.5}>
-              <ComplexStatisticsCard
-                color="primary"
-                icon="person_add"
-                title="Followers"
-                count="+91"
-                percentage={{
-                  color: "success",
-                  amount: "",
-                  label: "Just updated",
-                }}
-              />
-            </MDBox>
-          </Grid>
+          {stats.map((stat, index) => (
+            <Grid item xs={12} md={6} lg={3} key={index}>
+              <MDBox mb={1.5}>
+                <ComplexStatisticsCard
+                  color={stat.color}
+                  icon="leaderboard"
+                  title={stat.title}
+                  count={stat.count}
+                  percentage={{
+                    color: "success",
+                    amount: `${stat.percentage}%`,
+                    label: "Of total documents",
+                  }}
+                />
+              </MDBox>
+            </Grid>
+          ))}
         </Grid>
+
+        {/* Aligned PieChart + VerticalBarChart */}
         <MDBox mt={4.5}>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6} lg={4}>
-              <MDBox mb={3}>
-                <ReportsBarChart
-                  color="info"
-                  title="website views"
-                  description="Last Campaign Performance"
-                  date="campaign sent 2 days ago"
-                  chart={reportsBarChartData}
-                />
-              </MDBox>
-            </Grid>
-            <Grid item xs={12} md={6} lg={4}>
-              <MDBox mb={3}>
-                <ReportsLineChart
-                  color="success"
-                  title="daily sales"
-                  description={
-                    <>
-                      (<strong>+15%</strong>) increase in today sales.
-                    </>
-                  }
-                  date="updated 4 min ago"
-                  chart={sales}
-                />
-              </MDBox>
-            </Grid>
-            <Grid item xs={12} md={6} lg={4}>
-              <MDBox mb={3}>
-                <ReportsLineChart
-                  color="dark"
-                  title="completed tasks"
-                  description="Last Campaign Performance"
-                  date="just updated"
-                  chart={tasks}
-                />
-              </MDBox>
-            </Grid>
-          </Grid>
-        </MDBox>
-        <MDBox>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6} lg={8}>
-              <Projects />
-            </Grid>
-            <Grid item xs={12} md={6} lg={4}>
-              <OrdersOverview />
-            </Grid>
+          <Grid container spacing={3} alignItems="stretch">
+            {userDistributionChart && (
+              <Grid item xs={12} md={6} lg={6}>
+                <MDBox p={2}>
+                  <PieChart
+                    icon={userDistributionChart.icon}
+                    title={userDistributionChart.title}
+                    description={userDistributionChart.description}
+                    height="19.125rem"
+                    chart={userDistributionChart.chart}
+                  />
+                </MDBox>
+              </Grid>
+            )}
+
+            {userBarChart && (
+              <Grid item xs={12} md={6} lg={6}>
+                <MDBox p={2}>
+                  <VerticalBarChart
+                    icon={userBarChart.icon}
+                    title={userBarChart.title}
+                    description={userBarChart.description}
+                    chart={userBarChart.chart}
+                  />
+                </MDBox>
+              </Grid>
+            )}
           </Grid>
         </MDBox>
       </MDBox>
